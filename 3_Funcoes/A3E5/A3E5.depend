@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1774886979 source:c:\users\socia\onedrive\documents\c\aulas\2_funcoes\a3e5\calculadora.c
+
+1774887009 source:c:\users\socia\onedrive\documents\c\aulas\2_funcoes\a3e5\main.c
+	<stdio.h>
+	<stdlib.h>
+	"calculadora.h"
+
+1774886979 c:\users\socia\onedrive\documents\c\aulas\2_funcoes\a3e5\calculadora.h
+
