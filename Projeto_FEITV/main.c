@@ -1,8 +1,5 @@
 #include "funcoes.h"
 
-// PERGUNTAR SOBRE PLAGIO: ALGUMAS ESTRUTURAS PODEM SER PENSADAS DE FORMA IGUAL!
-// PERGUNTAR SE PRECISA EVITAR USUÁRIO DIGITAR TEXTO NO SCANF
-
 int main(int argc, char *argv[])
 {
     // Forçando o terminal a ler caracteres em português.
@@ -20,6 +17,7 @@ int main(int argc, char *argv[])
         printf("\n\n-> ");
 
         scanf("%d", &opcao);
+        getchar();
         limpar_terminal();
 
         switch(opcao)
@@ -43,7 +41,7 @@ int main(int argc, char *argv[])
     {
         printf("O que deseja acessar?\n");
         printf("\n[0] Sair");
-        printf("\n[1] Minha Área (Assistidos, Favoritos, Likes e Lista de Desejos)");
+        printf("\n[1] Minha Área (Assistidos, Playlists, Likes e Lista de Desejos)");
         printf("\n[2] Lista de Categorias");
         printf("\n[3] Procurar Obra Específica");
         printf("\n\n-> ");
@@ -78,6 +76,7 @@ int main(int argc, char *argv[])
                 printf("\n\n-> ");
 
                 scanf("%d", &subopcao);
+                getchar();
                 limpar_terminal();
 
                 switch (subopcao)

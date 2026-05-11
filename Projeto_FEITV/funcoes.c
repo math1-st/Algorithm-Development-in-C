@@ -221,105 +221,160 @@ void ver_minha_area(int id_usuario)
     // Lê cada linha do arquivo.
     while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
     {
-        // Tenta extrair os campos da linha.
-        if (sscanf(caracteres_na_linha, "%d|%[^|]|%d|%[^\n]",
-                   &id_lido, categoria_lida, &id_obra_lida, nome_obra_lida) >= 3)
+        // Tentamos ler a linha. O 'resultado' nos diz quantas informações o C encontrou.
+        int resultado = sscanf(caracteres_na_linha, "%d|%[^|]|%d|%[^\n]",
+                               &id_lido, categoria_lida, &id_obra_lida, nome_obra_lida);
+
+        if (id_lido == id_usuario)
         {
-            // Verifica se a interação pertence ao usuário logado.
-            if (id_lido == id_usuario)
+            // TIPO 1: Se encontrou 3 ou 4 informações, é uma OBRA em alguma lista
+            if (resultado >= 3)
             {
-                // Exibe o tipo de interação com um prefixo adequado.
                 if (strcmp(categoria_lida, "ASSISTIDOS") == 0) {
-                    printf("[ASSISTIDO]: ");
-                    listados++;
+                    printf("[ASSISTIDO]: %s (ID: %d)\n", nome_obra_lida, id_obra_lida);
                 }
                 else if (strcmp(categoria_lida, "LIKE") == 0) {
-                    printf("[CURTIDO]: ");
-                    listados++;
+                    printf("[CURTIDO]: %s (ID: %d)\n", nome_obra_lida, id_obra_lida);
                 }
                 else if (strcmp(categoria_lida, "LISTA DE DESEJOS") == 0) {
-                    printf("[DESEJADO]: ");
+                    printf("[DESEJADO]:  %s (ID: %d)\n", nome_obra_lida, id_obra_lida);
+                }
+                else {
+                    // Aqui mostra obras que estão dentro de playlists criadas por você
+                    printf("Playlist %s: %s (ID: %d)\n", categoria_lida, nome_obra_lida, id_obra_lida);
+                }
+                listados++;
+            }
+            // TIPO 2: Se encontrou EXATAMENTE 2 informações, é o TÍTULO de uma playlist
+            else if (resultado == 2)
+            {
+                // Pulamos os nomes reservados para não duplicar na tela
+                if (strcmp(categoria_lida, "ASSISTIDOS") != 0 &&
+                    strcmp(categoria_lida, "LIKE") != 0 &&
+                    strcmp(categoria_lida, "LISTA DE DESEJOS") != 0)
+                {
                     listados++;
                 }
-                else if (strcmp(categoria_lida, "MEUS FAVORITOS") == 0) {
-                    printf("[FAVORITADO]: ");
-                    listados++;
-                }
-
-                // Mostra o nome e o ID da obra.
-                printf("%s, ID: %d\n", nome_obra_lida, id_obra_lida);
             }
         }
     }
 
-    // Fecha o arquivo após a leitura.
+    if (listados == 0) {
+        printf("Você ainda não tem interações registradas.\n");
+    }
+
+    // Fecha o arquivo após a leitura inicial.
     fclose(area_usuarios);
 
     int opcao;
 
-    // Se não houver nenhuma interação, exibe mensagem e retorna.
-    if (listados == 0)
-    {
-        printf("\n- Não há obras para visualizar ou editar.\n");
-        printf("- Assista, curta, ou adicione obras às listas para visualizá-las aqui.\n\n");
-        return;
-    }
+    // Menu de opções da Minha Área.
+    printf("\nO que deseja fazer?\n");
+    printf("\n[0] Voltar");
+    printf("\n[1] Criar Playlist");
+    printf("\n[2] Editar/Excluir Playlist");
+    printf("\n[3] Remover obra de outras listas (Curtidas ou Lista de Desejos)");
 
-    // Pergunta se o usuário deseja remover alguma obra.
     do
     {
-        printf("\nDeseja remover alguma obra de alguma lista?\n");
-        printf("\n[1] Não");
-        printf("\n[2] Sim");
         printf("\n\n-> ");
-
         scanf("%d", &opcao);
 
-        // Se optar por não, limpa a tela e retorna.
-        if (opcao == 1)
-        {
+        if (opcao == 0) {
             limpar_terminal();
             return;
         }
 
-    } while (opcao != 2);
+        if (opcao == 1) {
+            criar_playlist(id_usuario);
+            return; // Retorna ao menu principal após criar
+        }
 
-    // Variável para armazenar a lista escolhida.
-    int escolher_lista;
-    char *lista_escolhida;
+        // Funcionalidade de Playlists.
+        if (opcao == 2)
+        {
+            char nome_playlist_alvo[30];
+            int escolha, parar_se_nao_exisitr;
 
-    // Solicita qual lista será modificada.
-    do
-    {
-        printf("\nEm qual lista a obra se encontra?\n");
-        printf("\n[1] CURTIDOS");
-        printf("\n[2] LISTA DE DESEJOS");
-        printf("\n[3] MEUS FAVORITOS");
+            printf("\nDigite o nome da playlist que deseja acessar: ");
+            // Limpa o buffer (caracteres acumulados) do teclado.
+            getchar();
+            fgets(nome_playlist_alvo, 30, stdin);
+            nome_playlist_alvo[strcspn(nome_playlist_alvo, "\n")] = '\0';
 
-        printf("\n\n-> ");
-        scanf("%d", &escolher_lista);
+            limpar_terminal();
+            // Chama a função de listagem que criamos anteriormente.
+            parar_se_nao_exisitr = listar_obras_playlist(id_usuario, nome_playlist_alvo);
 
-        // Define a string correspondente à lista escolhida.
-        if (escolher_lista == 2) {lista_escolhida = "LISTA DE DESEJOS";}
-        else if (escolher_lista == 3) {lista_escolhida = "MEUS FAVORITOS";}
+            if (parar_se_nao_exisitr == -1) {return;}
 
-    } while (escolher_lista < 1 || escolher_lista > 3);
+            printf("\nO que deseja acessar?\n");
+            printf("\n[0] Voltar");
+            printf("\n[1] Remover obra desta playlist");
+            printf("\n[2] Editar nome desta playlist");
+            printf("\n[3] Excluir playlist");
 
-    int id_da_obra;
+            do
+            {
+                printf("\n\n-> ");
+                scanf("%d", &escolha);
 
-    // Solicita o ID da obra a ser removida.
-    do
-    {
-        printf("\nDigite o ID da obra:");
-        printf("\n\n-> ");
-        scanf("%d", &id_da_obra);
 
-    } while (!(id_da_obra > 0 && id_da_obra < 100));
+            } while (escolha != 1 && escolha != 2 && escolha != 3);
 
-    // Se for a lista de curtidos, chama função específica (curtir/descurtir).
-    if (escolher_lista == 1) {curtir_descurtir_obra(id_usuario, id_da_obra);}
-    // Caso contrário, remove da lista escolhida.
-    else {remover_da_lista(id_usuario, id_da_obra, lista_escolhida);}
+            if (escolha == 1) {
+                int id_remover;
+                printf("\nDigite o ID da obra para remover: ");
+                scanf("%d", &id_remover);
+                remover_da_playlist(id_usuario, id_remover, nome_playlist_alvo);
+            }
+
+            else if (escolha == 2) {editar_nome_playlist(id_usuario, nome_playlist_alvo);}
+            else if (escolha == 3) {excluir_playlist(id_usuario, nome_playlist_alvo);}
+            return;
+        }
+
+        // Funcionalidade de remoção das listas normais.
+        if (opcao == 3) {
+
+            // Variável para armazenar a lista escolhida.
+            int escolher_lista;
+            char *lista_escolhida;
+
+            // Solicita qual lista será modificada.
+            do
+            {
+                printf("\nEm qual lista a obra se encontra?\n");
+                printf("\n[0] Voltar");
+                printf("\n[1] Curtidos");
+                printf("\n[2] Lista de Desejos");
+
+                printf("\n\n-> ");
+                scanf("%d", &escolher_lista);
+
+                if (escolher_lista == 0) {return;}
+                else if (escolher_lista == 1) {lista_escolhida = "LIKE";}
+                else if (escolher_lista == 2) {lista_escolhida = "LISTA DE DESEJOS";}
+
+            } while (escolher_lista != 1 && escolher_lista != 2);
+
+            int id_da_obra;
+
+            // Solicita o ID da obra a ser removida.
+            do
+            {
+                printf("\nDigite o ID da obra:");
+                printf("\n\n-> ");
+                scanf("%d", &id_da_obra);
+
+            } while (!(id_da_obra > 0 && id_da_obra < 1000)); // Aumentei o limite para IDs maiores.
+
+            // Se for a lista de curtidos, chama função específica.
+            if (escolher_lista == 1) {curtir_descurtir_obra(id_usuario, id_da_obra);}
+            else if (escolher_lista == 2) {remover_da_lista(id_usuario, id_da_obra, lista_escolhida);}
+        }
+
+    } while (opcao != 0 && opcao != 1 && opcao != 2 && opcao != 3);
 }
 
 void listar_filtrado(int id_usuario, char *categoria_escolhida)
@@ -487,6 +542,7 @@ void curtir_descurtir_obra(int id_do_usuario, int id_da_obra_selecionada)
     do
     {
         printf("\n\n-> ");
+        getchar();
         scanf("%d", &opcao);
         if (opcao == 1) {curtir_ou_descurtir = 1;}
         else if (opcao == 2) {curtir_ou_descurtir = -1;}
@@ -540,17 +596,22 @@ void curtir_descurtir_obra(int id_do_usuario, int id_da_obra_selecionada)
             verificar_abertura_arquivo(temporario);
 
             // Copia todas as linhas menos a do like.
+            // ... dentro do else if (curtir_ou_descurtir == -1) ...
+
             while(fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
             {
+                // Tentamos identificar se a linha é um LIKE
                 if (sscanf(caracteres_na_linha, "%d|LIKE|%d", &id_usuario_lido, &id_obra_lida) == 2)
                 {
-                    if (!(id_usuario_lido == id_do_usuario && id_obra_lida == id_da_obra_selecionada))
+                    // Se for o LIKE específico que queremos apagar, não fazemos nada (pula a cópia)
+                    if (id_usuario_lido == id_do_usuario && id_obra_lida == id_da_obra_selecionada)
                     {
-                        fprintf(temporario, "%s", caracteres_na_linha);
+                        continue;
                     }
                 }
-                // Linhas que não são LIKE também são copiadas (caso haja outras estruturas).
-                // Nota: O código original não copia linhas que não são LIKE, mas mantemos como está.
+
+                // Se não for o LIKE alvo (seja outra linha de LIKE ou uma PLAYLIST), copia normalmente
+                fputs(caracteres_na_linha, temporario);
             }
 
             fclose(area_usuarios);
@@ -644,6 +705,8 @@ void curtir_descurtir_obra(int id_do_usuario, int id_da_obra_selecionada)
     {
         printf("\nErro: Não foi possível curtir a obra...\n");
     }
+
+    return;
 }
 
 void pegar_nome_obra(int id_da_obra, char *variavel_colocar_nome)
@@ -769,56 +832,94 @@ void assistir(int id_do_usuario, int id_da_obra)
     else {fclose(area_usuarios);}
 }
 
-void adicionar_na_lista(int id_do_usuario, int id_da_obra, char *qual_lista)
-/*
-    Função que salva uma obra específica na Lista de Desejos
-    ou Meus Favoritos.
+void adicionar_lista_desejos(int id_usuario, int id_obra) {
+    FILE *arquivo = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(arquivo);
 
-    Percorrendo as linhas de area_usuarios.txt,
-    caso a obra já esteja presente, não é adicionada.
-*/
-{
-    // Abre a área do usuário para verificar duplicidade.
-    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
-    verificar_abertura_arquivo(area_usuarios);
+    char linha[256], lista_lida[50];
+    int user_lido, obra_lida;
+    int ja_existe = 0;
 
-    int id_usuario_lido, id_obra_lida;
-    char lista_lida[50];
-    char caracteres_na_linha[256];
+    // Passo 1: Ver se a obra já está lá (evitar duplicado)
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        if (sscanf(linha, "%d|%[^|]|%d", &user_lido, lista_lida, &obra_lida) == 3) {
+            if (user_lido == id_usuario && obra_lida == id_obra && strcmp(lista_lida, "LISTA DE DESEJOS") == 0) {
+                printf("\nEssa obra já está na sua Lista de Desejos!\n");
+                ja_existe = 1;
+                break;
+            }
+        }
+    }
+    fclose(arquivo);
 
-    // Verifica se a obra já está na lista desejada.
-    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
-    {
-        if (sscanf(caracteres_na_linha, "%d|%[^|]|%d", &id_usuario_lido, lista_lida, &id_obra_lida) == 3)
-        {
-            if (id_do_usuario == id_usuario_lido &&
-                id_da_obra == id_obra_lida &&
-                strcmp(qual_lista, lista_lida) == 0)
-            {
-                limpar_terminal();
-                printf("A obra já está na lista %s.\n", qual_lista);
-                fclose(area_usuarios);
-                return;
+    if (ja_existe) return;
+
+    // Passo 2: Pegar o nome e salvar
+    char nome_obra[100];
+    pegar_nome_obra(id_obra, nome_obra);
+
+    arquivo = fopen("area_usuarios.txt", "a");
+    // O \n no começo é o "pulo do gato" para não grudar na linha de cima!
+    fprintf(arquivo, "%d|LISTA DE DESEJOS|%d|%s\n", id_usuario, id_obra, nome_obra);
+    fclose(arquivo);
+
+    printf("\n'%s' adicionado aos Desejos!\n", nome_obra);
+}
+
+void adicionar_obra_na_playlist(int id_usuario, int id_obra, char *nome_playlist) {
+    // Limpa o nome da playlist (tira o 'Enter')
+    nome_playlist[strcspn(nome_playlist, "\n")] = '\0';
+
+    FILE *arquivo = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(arquivo);
+
+    char linha[256], nome_lido[50];
+    int user_lido, obra_lida, playlist_criada = 0, ja_tem_obra = 0;
+
+    // Passo 1: A playlist existe? (Procura a linha ID|NOME)
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        int colunas = sscanf(linha, "%d|%[^|\n]", &user_lido, nome_lido);
+        if (colunas == 2 && user_lido == id_usuario && strcmp(nome_lido, nome_playlist) == 0) {
+            // Verifica se não é uma linha de obra (linhas de obra têm mais de um '|')
+            char *primeiro_pipe = strchr(linha, '|');
+            char *ultimo_pipe = strrchr(linha, '|');
+            if (primeiro_pipe == ultimo_pipe) {
+                playlist_criada = 1;
+                break;
             }
         }
     }
 
-    fclose(area_usuarios);
+    if (!playlist_criada) {
+        printf("\nA playlist '%s' não existe.\n", nome_playlist);
+        fclose(arquivo);
+        return;
+    }
 
-    // Obtém o nome da obra.
-    char nome_da_obra[50];
-    pegar_nome_obra(id_da_obra, nome_da_obra);
+    // Passo 2: A obra já está nessa playlist?
+    rewind(arquivo);
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        if (sscanf(linha, "%d|%[^|]|%d", &user_lido, nome_lido, &obra_lida) == 3) {
+            if (user_lido == id_usuario && obra_lida == id_obra && strcmp(nome_lido, nome_playlist) == 0) {
+                printf("\nA obra já está na playlist '%s'!\n", nome_playlist);
+                ja_tem_obra = 1;
+                break;
+            }
+        }
+    }
+    fclose(arquivo);
 
-    // Adiciona ao final do arquivo.
-    area_usuarios = fopen("area_usuarios.txt", "a");
-    verificar_abertura_arquivo(area_usuarios);
+    if (ja_tem_obra) return;
 
-    fprintf(area_usuarios, "%d|%s|%d|%s\n", id_do_usuario, qual_lista, id_da_obra, nome_da_obra);
+    // Passo 3: Salvar com segurança
+    char nome_obra[100];
+    pegar_nome_obra(id_obra, nome_obra);
 
-    fclose(area_usuarios);
+    arquivo = fopen("area_usuarios.txt", "a");
+    fprintf(arquivo, "%d|%s|%d|%s\n", id_usuario, nome_playlist, id_obra, nome_obra);
+    fclose(arquivo);
 
-    limpar_terminal();
-    printf("'%s' foi adicionado à lista %s.\n\n", nome_da_obra, qual_lista);
+    printf("\n'%s' adicionado à playlist '%s'!\n", nome_obra, nome_playlist);
 }
 
 void remover_da_lista(int id_do_usuario, int id_da_obra, char *qual_lista)
@@ -904,6 +1005,7 @@ void manipular_obra(int id_usuario)
         // Solicita o ID da obra.
         printf("\nDigite o ID para selecionar a obra, ou zero para voltar:\n");
         printf("\n-> ");
+        getchar();
         scanf("%d", &id_da_obra);
 
         // Se for zero, volta ao menu anterior.
@@ -921,10 +1023,10 @@ void manipular_obra(int id_usuario)
 
             printf("\nObra selecionada: '%s'. Escolha uma opção:\n", nome_da_obra);
             printf("\n[0] Voltar");
-            printf("\n[1] Curtir/Descurtir Obra");
-            printf("\n[2] Assistir");
-            printf("\n[3] Adicionar aos Meus Favoritos");
-            printf("\n[4] Adicionar à Lista de Desejos");
+            printf("\n[1] Assistir");
+            printf("\n[2] Curtir/Descurtir Obra");
+            printf("\n[3] Adicionar à Lista de Desejos");
+            printf("\n[4] Adicionar à Playlist");
 
             // Loop para garantir opção válida.
             do
@@ -934,6 +1036,7 @@ void manipular_obra(int id_usuario)
                 if (escolher < 0 || escolher > 4) {printf("\nVocê não escolheu uma opção válida.");}
             } while (escolher < 0 || escolher > 4);
 
+            char nome_playlist[50];
             limpar_terminal();
 
             // Executa a ação conforme a opção.
@@ -942,16 +1045,20 @@ void manipular_obra(int id_usuario)
                 case 0:
                     break;
                 case 1:
-                    curtir_descurtir_obra(id_usuario, id_da_obra);
-                    break;
-                case 2:
                     assistir(id_usuario, id_da_obra);
                     break;
+                case 2:
+                    curtir_descurtir_obra(id_usuario, id_da_obra);
+                    break;
                 case 3:
-                    adicionar_na_lista(id_usuario, id_da_obra, "MEUS FAVORITOS");
+                    adicionar_lista_desejos(id_usuario, id_da_obra);
                     break;
                 case 4:
-                    adicionar_na_lista(id_usuario, id_da_obra, "LISTA DE DESEJOS");
+                    printf("\nDigite o nome da playlist:");
+                    printf("\n\n-> ");
+                    getchar();
+                    fgets(nome_playlist, 50, stdin);
+                    adicionar_obra_na_playlist(id_usuario, id_da_obra, nome_playlist);
                     break;
             }
         }
@@ -959,4 +1066,337 @@ void manipular_obra(int id_usuario)
         else  {printf("\nVocê não selecionou um ID corretamente.\n");}
 
     } while (!(id_da_obra > 0 && id_da_obra < 100));
+}
+
+void criar_playlist(int id_usuario)
+{
+    limpar_terminal();
+
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    char nome_playlist[50], playlist_lida[50];
+    int id_usuario_lido, playlist_encontrada = 0;
+
+    do
+    {
+        printf("\nDigite o nome da sua playlist:");
+        printf("\n\n-> ");
+
+        getchar();
+        fgets(nome_playlist, 50, stdin);
+        nome_playlist[strcspn(nome_playlist, "\n")] = '\0';
+        rewind(area_usuarios);
+
+        char caracteres_na_linha[256];
+        while(fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+        {
+            if (sscanf(caracteres_na_linha, "%d|%[^|]", &id_usuario_lido, playlist_lida) == 2)
+            {
+                if (id_usuario_lido == id_usuario && strcmp(playlist_lida, nome_playlist) == 0)
+                {
+                    printf("\nEssa playlist já existe! Tente outro nome.\n");
+                    playlist_encontrada = 1;
+                    break;
+                }
+            }
+        }
+    } while (playlist_encontrada == 1);
+
+    fclose(area_usuarios);
+
+    area_usuarios = fopen("area_usuarios.txt", "a");
+    verificar_abertura_arquivo(area_usuarios);
+
+    fprintf(area_usuarios, "%d|%s\n", id_usuario, nome_playlist);
+    fclose(area_usuarios);
+
+    printf("\nPlaylist criada! Adicione suas obras favoritas!\n");
+}
+
+void adicionar_na_playlist(int id_usuario, int id_obra, char *nome_playlist)
+{
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    int id_usuario_lido, id_obra_lida;
+    char nome_playlist_lida[50];
+    char caracteres_na_linha[256];
+    int obra_encontrada = 0;
+
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        if (sscanf(caracteres_na_linha, "%d|%[^|]|%d", &id_usuario_lido, nome_playlist_lida, &id_obra_lida) == 3)
+        {
+            if (id_usuario == id_usuario_lido &&
+                id_obra == id_obra_lida &&
+                strcmp(nome_playlist, nome_playlist_lida) == 0)
+            {
+                obra_encontrada = 1;
+                break;
+            }
+        }
+    }
+
+    fclose(area_usuarios);
+
+    if (obra_encontrada)
+    {
+        printf("\nA obra ja esta na playlist '%s'.\n", nome_playlist);
+        return;
+    }
+
+    area_usuarios = fopen("area_usuarios.txt", "a");
+    verificar_abertura_arquivo(area_usuarios);
+
+    char nome_obra[50];
+    pegar_nome_obra(id_obra, nome_obra);
+
+    fprintf(area_usuarios, "%d|%s|%d|%s\n", id_usuario, nome_playlist, id_obra, nome_obra);
+
+    fclose(area_usuarios);
+
+    printf("\n'%s' adicionado à playlist '%s'!\n", nome_obra, nome_playlist);
+}
+
+void remover_da_playlist(int id_usuario, int id_obra, char *nome_playlist)
+{
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    FILE *temporario = fopen("temporario.txt", "w");
+    verificar_abertura_arquivo(temporario);
+
+    int id_usuario_lido, id_obra_lida, encontrado = 0;
+    char nome_playlist_lida[50], caracteres_na_linha[256];
+
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        if (sscanf(caracteres_na_linha, "%d|%[^|]|%d", &id_usuario_lido, nome_playlist_lida, &id_obra_lida) == 3)
+        {
+            if (id_usuario == id_usuario_lido &&
+                id_obra == id_obra_lida &&
+                strcmp(nome_playlist, nome_playlist_lida) == 0)
+            {
+                encontrado = 1;
+                 // Pula essa linha (não escreve no arquivo temporário)
+                continue;
+            }
+        }
+
+        // Se não for a linha alvo, copia para o arquivo novo
+        fputs(caracteres_na_linha, temporario);
+    }
+
+    fclose(area_usuarios);
+    fclose(temporario);
+
+    limpar_terminal();
+
+    if (encontrado)
+    {
+        remove("area_usuarios.txt");
+        rename("temporario.txt", "area_usuarios.txt");
+        printf("Obra removida da playlist '%s'.\n", nome_playlist);
+    }
+    else
+    {
+        // Deletar o temporário se nada mudou
+        remove("temporario.txt");
+        printf("Obra nao encontrada nesta playlist.\n");
+    }
+}
+
+void editar_nome_playlist(int id_usuario, char *nome_playlist_antigo)
+{
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    FILE *temporario = fopen("temporario.txt", "w");
+    verificar_abertura_arquivo(temporario);
+
+    char novo_nome[50], nome_obra_lida[50];
+     // Variável para salvar todas as IDs encontradas antes de apagar
+    int ids_obras_guardados[100];
+    int quantidade_obras = 0;
+
+    printf("\nDigite o novo nome para a playlist '%s': ", nome_playlist_antigo);
+
+    getchar();
+    fgets(novo_nome, 50, stdin);
+    // Removemos o '\n' que o fgets deixa após o usuário apertar enter.
+    novo_nome[strcspn(novo_nome, "\n")] = '\0';
+
+    int id_usuario_lido, id_obra_lida;
+    char playlist_lida[50], caracteres_na_linha[256];
+
+    // Apenas para "guardar" as IDs das obras
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        // Se a linha tiver 4 itens, é uma obra da playlist
+        if (sscanf(caracteres_na_linha, "%d|%[^|]|%d|%[^\n]", &id_usuario_lido, playlist_lida, &id_obra_lida, nome_obra_lida) == 4)
+        {
+            if (id_usuario == id_usuario_lido && strcmp(nome_playlist_antigo, playlist_lida) == 0)
+            {
+                ids_obras_guardados[quantidade_obras] = id_obra_lida;
+                quantidade_obras++;
+            }
+        }
+    }
+
+    // Voltamos o arquivo original para o começo para o segundo loop
+    rewind(area_usuarios);
+
+    // Para copiar pro temporário filtrando o que não queremos
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        // 1. Tenta ler como obra (4 partes)
+        int colunas = sscanf(caracteres_na_linha, "%d|%[^|]|%d|%[^\n]", &id_usuario_lido, playlist_lida, &id_obra_lida, nome_obra_lida);
+
+        // 2. Se não for obra, tenta ler como criação (2 partes)
+        if (colunas < 4) {
+            colunas = sscanf(caracteres_na_linha, "%d|%[^\n]", &id_usuario_lido, playlist_lida);
+        }
+
+        // Se a linha for do usuário e tiver o nome antigo, nós damos CONTINUE (apagamos ela)
+        if (id_usuario == id_usuario_lido && strcmp(nome_playlist_antigo, playlist_lida) == 0)
+        {
+            continue;
+        }
+
+        // Se não caiu no if acima, copiamos a linha original
+        fputs(caracteres_na_linha, temporario);
+    }
+
+    // Grava a linha de criação com nome novo
+    fprintf(temporario, "%d|%s\n", id_usuario, novo_nome);
+
+    // Grava as obras com nome novo
+    for (int i = 0; i < quantidade_obras; i++)
+    {
+        // Aqui buscamos o nome da obra para ficar bonitinho no arquivo
+        char nome_atual[50];
+        pegar_nome_obra(ids_obras_guardados[i], nome_atual);
+        fprintf(temporario, "%d|%s|%d|%s\n", id_usuario, novo_nome, ids_obras_guardados[i], nome_atual);
+    }
+
+    fclose(area_usuarios);
+    fclose(temporario);
+
+    remove("area_usuarios.txt");
+    rename("temporario.txt", "area_usuarios.txt");
+    printf("\nNome da playlist '%s' alterada para '%s'.\n", nome_playlist_antigo, novo_nome);
+}
+
+int listar_obras_playlist(int id_usuario, char *nome_playlist)
+{
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    int id_usuario_lido, id_obra_lida, contador_obras = 0;
+    char nome_playlist_lida[50], nome_obra_lida[50];
+    char caracteres_na_linha[256];
+    int playlist_existe = 0;
+
+    // Usamos APENAS UM LOOP para ler o arquivo do começo ao fim
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        // 1. Tenta ler como se fosse uma linha de OBRA (4 campos)
+        int campos = sscanf(caracteres_na_linha, "%d|%[^|]|%d|%[^\n]",
+                            &id_usuario_lido, nome_playlist_lida, &id_obra_lida, nome_obra_lida);
+
+        // 2. Se não conseguiu ler 4, tenta ler como linha de CRIACAO (2 campos)
+        if (campos < 4) {
+            campos = sscanf(caracteres_na_linha, "%d|%[^|\n]", &id_usuario_lido, nome_playlist_lida);
+        }
+
+        // 3. Verificamos se a linha pertence ao usuário e à playlist
+        if (id_usuario == id_usuario_lido && strcmp(nome_playlist, nome_playlist_lida) == 0)
+        {
+            playlist_existe = 1; // Se entrou aqui uma vez, a playlist existe!
+
+            // Se for uma linha que contém obra (campos >= 3)
+            if (campos >= 3)
+            {
+                if (contador_obras == 0) {
+                    printf("Obras na Playlist '%s':\n", nome_playlist);
+                }
+                printf("%d. %s (ID: %d)\n", contador_obras + 1, nome_obra_lida, id_obra_lida);
+                contador_obras++;
+            }
+        }
+    }
+
+    fclose(area_usuarios);
+
+    // Se depois de ler tudo, não achamos nem a linha de criação
+    if (playlist_existe == 0)
+    {
+        printf("Essa playlist não existe.\n\n");
+        return -1;
+    }
+
+    if (contador_obras == 0) {
+        printf("\nA playlist '%s' existe, mas está vazia.\n", nome_playlist);
+    } else {
+        printf("\nTotal de obras: %d\n", contador_obras);
+    }
+
+    return contador_obras;
+}
+
+void excluir_playlist(int id_usuario, char *nome_playlist)
+{
+    // 1. Abrir o arquivo original para leitura e o temporário para escrita.
+    FILE *area_usuarios = fopen("area_usuarios.txt", "r");
+    verificar_abertura_arquivo(area_usuarios);
+
+    FILE *temporario = fopen("temporario.txt", "w");
+    verificar_abertura_arquivo(temporario);
+
+    int id_usuario_lido, playlist_encontrada = 0;
+    char nome_playlist_lida[50], caracteres_na_linha[256];
+
+    getchar();
+    while (fgets(caracteres_na_linha, sizeof(caracteres_na_linha), area_usuarios))
+    {
+        // Limpa o \n da linha lida para evitar erros de comparação
+        caracteres_na_linha[strcspn(caracteres_na_linha, "\n")] = '\0';
+
+        // Tentamos ler apenas os dois primeiros campos: ID e NOME
+        // Usamos %[^|] para o nome parar exatamente na barra (se houver)
+        // ou ler tudo se não houver barra.
+        if (sscanf(caracteres_na_linha, "%d|%[^|]", &id_usuario_lido, nome_playlist_lida) == 2)
+        {
+            // Se o ID e o Nome batem perfeitamente
+            if (id_usuario == id_usuario_lido && strcmp(nome_playlist, nome_playlist_lida) == 0)
+            {
+                playlist_encontrada = 1;
+                continue; // Pula essa linha (deleta)
+            }
+        }
+        // Se não for a playlist, coloca o \n de volta e salva
+        fprintf(temporario, "%s\n", caracteres_na_linha);
+
+    }
+
+    // 3. Fechar os arquivos para poder manipular os nomes no sistema.
+    fclose(area_usuarios);
+    fclose(temporario);
+
+    limpar_terminal();
+
+    if (playlist_encontrada)
+    {
+        // Remove o banco de dados antigo e renomeia o novo.
+        remove("area_usuarios.txt");
+        rename("temporario.txt", "area_usuarios.txt");
+        printf("A playlist '%s' e todas as suas obras foram excluidas.\n", nome_playlist);
+    }
+    else
+    {
+        // Se não achou nada, apenas descarta o temporário.
+        remove("temporario.txt");
+        printf("Playlist '%s' não encontrada para exclusao.\n", nome_playlist);
+    }
 }
