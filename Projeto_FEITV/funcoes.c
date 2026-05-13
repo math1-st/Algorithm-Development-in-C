@@ -278,6 +278,7 @@ void ver_minha_area(int id_usuario)
     do
     {
         printf("\n\n-> ");
+        getchar();
         scanf("%d", &opcao);
 
         if (opcao == 0) {
@@ -432,7 +433,8 @@ void transformar_em_minusculo(char *nome_da_obra)
 */
 {
     // Percorre cada caractere da string.
-    for (int i = 0; nome_da_obra[i]; i++) {nome_da_obra[i] = tolower(nome_da_obra[i]);}
+    int i;
+    for (i = 0; nome_da_obra[i]; i++) {nome_da_obra[i] = tolower(nome_da_obra[i]);}
 }
 
 void procurar_obra(int id_usuario)
@@ -1228,7 +1230,8 @@ void editar_nome_playlist(int id_usuario, char *nome_playlist_antigo)
     fprintf(temporario, "%d|%s\n", id_usuario, novo_nome);
 
     // Grava as obras com nome novo
-    for (int i = 0; i < quantidade_obras; i++)
+    int i;
+    for (i = 0; i < quantidade_obras; i++)
     {
         // Aqui buscamos o nome da obra para ficar bonitinho no arquivo
         char nome_atual[50];

@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
         printf("O que deseja acessar?\n");
         printf("\n[0] Sair");
         printf("\n[1] Minha Área (Assistidos, Playlists, Likes e Lista de Desejos)");
-        printf("\n[2] Lista de Categorias");
-        printf("\n[3] Procurar Obra Específica");
+        printf("\n[2] Lista de Categorias de Filmes e Séries");
+        printf("\n[3] Buscar Filmes e Séries");
         printf("\n\n-> ");
 
         scanf("%d", &opcao);
